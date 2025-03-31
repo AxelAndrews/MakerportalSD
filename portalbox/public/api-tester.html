@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Tester</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .panel { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+        button { padding: 8px 15px; background: #4CAF50; color: white; border: none; cursor: pointer; margin-right: 10px; }
+        input, select { padding: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+        label { display: block; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Test Tool</h1>
+        
+        <div class="panel">
+            <h2>Request</h2>
+            <label for="url">URL:</label>
+            <input type="text" id="url" value="/api/api-test.php" />
+            
+            <label for="method">Method:</label>
+            <select id="method">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+            </select>
+            
+            <label for="params">URL Parameters (key=value, one per line):</label>
+            <textarea id="params" rows="3" style="width:100%">mode=test</textarea>
+            
+            <label for="body">Request Body:</label>
+            <textarea id="body" rows="3" style="width:100%">data=test</textarea>
+            
+            <label for="authHeader">Authorization Header:</label>
+            <input type="text" id="authHeader" value="Bearer test_token" />
+            
+            <div style="margin-top: 15px;">
+                <button onclick="sendRequest()">Send Request</button>
+                <button onclick="clearResponse()">Clear Response</button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Response</h2>
+            <pre id="response">Response will appear here...</pre>
+        </div>
+    </div>
+    
+    <script>
+        async function sendRequest() {
+            const url = document.getElementById('url').value;
+            const method = document.getElementById('method').value;
+            const params = document.getElementById('params').value;
+            const body = document.getElementById('body').value;
+            const authHeader = document.getElementById('authHeader').value;
+            
+            // Parse parameters
+            const urlParams = new URLSearchParams();
+            params.split('\n').forEach(param => {
+                if (param.trim()) {
+                    const [key, value] = param.split('=');
+                    if (key && value) {
+                        urlParams.append(key.trim(), value.trim());
+                    }
+                }
+            });
+            
+            // Build full URL
+            let fullUrl = url;
+            if (urlParams.toString()) {
+                fullUrl += (url.includes('?') ? '&' : '?') + urlParams.toString();
+            }
+            
+            // Prepare fetch options
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                credentials: 'include' // Include cookies
+            };
+            
+            // Add authorization header if provided
+            if (authHeader) {
+                options.headers['Authorization'] = authHeader;
+            }
+            
+            // Add body for non-GET requests
+            if (method !== 'GET' && body.trim()) {
+                options.body = body;
+            }
+            
+            try {
+                const response = await fetch(fullUrl, options);
+                const responseText = await response.text();
+                
+                // Try to parse as JSON
+                try {
+                    const json = JSON.parse(responseText);
+                    document.getElementById('response').textContent = JSON.stringify(json, null, 2);
+                } catch (e) {
+                    document.getElementById('response').textContent = responseText;
+                }
+            } catch (error) {
+                document.getElementById('response').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function clearResponse() {
+            document.getElementById('response').textContent = 'Response will appear here...';
+        }
+    </script>
+</body>
+</html>
