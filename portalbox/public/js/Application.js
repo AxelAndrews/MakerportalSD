@@ -696,6 +696,7 @@ class Application {
 						"ledger": ledger,
 						"user": user
 					}, {}, () => {
+						this.setupProfilePinHandlers();
 						let transaction_button = null;
 						transaction_button = document.getElementById("transaction-button");
 						if(transaction_button) {
@@ -704,7 +705,6 @@ class Application {
 						if(values[1].length + values[2].length > 20) {
 							this.toggle_transactions();
 						}
-						this.setupProfilePinHandlers();
 					});
 				}).catch(e => this.handleError(e));
 			});
@@ -1581,63 +1581,70 @@ class Application {
 		}).catch(e => this.handleError(e));
 	}
 
-	/**
-	 * Set up event handlers for the profile page PIN functionality
-	 */
 	setupProfilePinHandlers() {
-		const changePinButton = document.getElementById('change-pin-button');
-		const changePinForm = document.getElementById('change-pin-form');
-		const cancelPinButton = document.getElementById('cancel-pin-button');
-		const updatePinForm = document.getElementById('update-pin-form');
-		
-		if (changePinButton) {
-		changePinButton.addEventListener('click', function() {
-			changePinForm.style.display = 'block';
-			changePinButton.style.display = 'none';
-		});
-		}
-		
-		if (cancelPinButton) {
-		cancelPinButton.addEventListener('click', function() {
-			changePinForm.style.display = 'none';
-			changePinButton.style.display = 'inline-block';
-		});
-		}
-		
-		if (updatePinForm) {
-		updatePinForm.addEventListener('submit', (e) => {
-			e.preventDefault();
-			const newPin = document.getElementById('new-pin').value;
-			
-			// Validate PIN format
-			if (!/^\d{4}$/.test(newPin)) {
-			alert('PIN must be exactly 4 digits.');
-			return;
-			}
-			
-			// Get the user ID from the current user
-			const userId = this.user.id;
-			
-			// Get existing user data
-			User.read(userId).then(userData => {
-			// Update only the PIN field
-			userData.pin = newPin;
-			
-			// Send the update to the server
-			return User.modify(userId, userData);
-			})
-			.then(() => {
-			alert('PIN updated successfully');
-			// Refresh the page to show the updated PIN
-			window.location.reload();
-			})
-			.catch(error => {
-			alert('Error updating PIN: ' + error);
-			console.error(error);
+		// Using setTimeout to ensure the DOM is fully loaded
+		setTimeout(() => {
+		  const changePinButton = document.getElementById('change-pin-button');
+		  const changePinForm = document.getElementById('change-pin-form');
+		  const cancelPinButton = document.getElementById('cancel-pin-button');
+		  const updatePinForm = document.getElementById('update-pin-form');
+		  
+		  if (changePinButton) {
+			changePinButton.addEventListener('click', function() {
+			  changePinForm.style.display = 'block';
+			  changePinButton.style.display = 'none';
 			});
-		});
-		}
-	}
+		  }
+		  
+		  if (cancelPinButton) {
+			cancelPinButton.addEventListener('click', function() {
+			  changePinForm.style.display = 'none';
+			  changePinButton.style.display = 'inline-block';
+			});
+		  }
+		  
+		  if (updatePinForm) {
+			updatePinForm.addEventListener('submit', (e) => {
+			  e.preventDefault();
+			  const newPin = document.getElementById('new-pin').value;
+			  
+			  // Validate PIN format
+			  if (!/^\d{4}$/.test(newPin)) {
+				alert('PIN must be exactly 4 digits.');
+				return;
+			  }
+			  
+			  // Get the user ID from the current user
+			  const userId = this.user.id;
+			  
+			  // Update the PIN
+			  User.read(userId).then(userData => {
+				// Create update object with only necessary fields
+				const updateData = {
+				  name: userData.name,
+				  email: userData.email,
+				  comment: userData.comment || '',
+				  pin: newPin,
+				  role_id: userData.role.id,
+				  is_active: userData.is_active,
+				  authorizations: userData.authorizations || []
+				};
+				
+				return User.modify(userId, updateData);
+			  })
+			  .then(() => {
+				alert('PIN updated successfully');
+				// Refresh the page to show the updated PIN
+				window.location.reload();
+			  })
+			  .catch(error => {
+				alert('Error updating PIN: ' + error);
+				console.error(error);
+			  });
+			});
+		  }
+		}, 100);
+	  }
 
 	/**
 	 * Render an optionally sorted list of users
