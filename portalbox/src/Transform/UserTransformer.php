@@ -37,6 +37,12 @@ class UserTransformer implements InputTransformer, OutputTransformer {
 		if(!array_key_exists('is_active', $data)) {
 			throw new InvalidArgumentException('\'is_active\' is a required field');
 		}
+		if(array_key_exists('pin', $data)) {
+			if (!preg_match('/^\d{4}$/', $data['pin'])) {
+				throw new InvalidArgumentException('\'pin\' must be a 4-digit number');
+			}
+			$user->set_pin($data['pin']);
+		}
 
 		$role = (new RoleModel(Config::config()))->read($data['role_id']);
 		if(NULL === $role) {
@@ -90,6 +96,7 @@ class UserTransformer implements InputTransformer, OutputTransformer {
 				'name' => $data->name(),
 				'email' => $data->email(),
 				'comment' => $data->comment(),
+				'pin' => $data->pin(),
 				'role' => is_null($data->role()) ? NULL : $role_transformer->serialize($data->role(), $traverse),
 				'is_active' => $data->is_active(),
 				'authorizations' => $data->authorizations()
@@ -100,6 +107,7 @@ class UserTransformer implements InputTransformer, OutputTransformer {
 				'name' => $data->name(),
 				'email' => $data->email(),
 				'comment' => $data->comment(),
+				'pin' => $data->pin(),
 				'role' => $data->role_name(),
 				'is_active' => $data->is_active()
 			];
@@ -114,6 +122,6 @@ class UserTransformer implements InputTransformer, OutputTransformer {
 	 * @return array - a list of strings that ccan be column headers
 	 */
 	public function get_column_headers() : array {
-		return ['id', 'Name', 'Email', 'Comment', 'Role', 'Active'];
+		return ['id', 'Name', 'Email', 'Comment', 'PIN', 'Role', 'Active'];
 	}
 }

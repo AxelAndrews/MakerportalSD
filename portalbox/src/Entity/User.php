@@ -25,6 +25,9 @@ class User {
 
 	/** The role of the user */
 	protected ?Role $role = null;
+	
+	/** This user's PIN for authentication */
+	protected string $pin = '0000';
 
 	/**
 	 * Whether this user is active ie can login
@@ -79,6 +82,17 @@ class User {
 	public function set_role_id(int $role_id) : self {
 		$this->role_id = $role_id;
 		$this->role = NULL;
+		return $this;
+	}
+	
+	/** Get this user's PIN */
+	public function pin() : string {
+		return $this->pin;
+	}
+
+	/** Set this user's PIN */
+	public function set_pin(string $pin) : self {
+		$this->pin = $pin;
 		return $this;
 	}
 

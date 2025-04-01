@@ -12,6 +12,8 @@
 		<dd>{{name}}</dd>
 		<dt>Email:</dt>
 		<dd><a href="mailto:{{email}}">{{email}}</a></dd>
+		<dt>PIN:</dt>
+		<dd>{{pin}} <button type="button" id="change-pin-button" class="default">Change PIN</button></dd>
 		<dt>Authorized for:</dt>
 		<dd>
 			{{#equipment_type}}
@@ -45,5 +47,99 @@
 			</table>
 		</dd>
 	</dl>
+
+	<div id="change-pin-form" style="display: none;">
+		<form id="update-pin-form">
+			<h3>Change PIN</h3>
+			<label for="new-pin">New PIN:</label>
+			<input type="text" id="new-pin" name="pin" pattern="^\d{4}$" required maxlength="4" value="{{pin}}">
+			<div class="help">
+				<label for="pin-help-toggle">
+					<i class="material-icons">help</i>
+				</label>
+				<input type="checkbox" id="pin-help-toggle" class="checkbox-hack">
+				<div class="content">
+					<label for="pin-help-toggle" class="scrim"></label>
+					<div>
+						<p>PIN must be exactly 4 digits (0-9).</p>
+					</div>
+				</div>
+			</div>
+			<div class="button-group">
+				<button type="button" id="cancel-pin-button">Cancel</button>
+				<button type="submit" class="default">Save</button>
+			</div>
+		</form>
+	</div>
 </article>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const changePinButton = document.getElementById('change-pin-button');
+        const changePinForm = document.getElementById('change-pin-form');
+        const cancelPinButton = document.getElementById('cancel-pin-button');
+        const updatePinForm = document.getElementById('update-pin-form');
+        
+        if (changePinButton) {
+            changePinButton.addEventListener('click', function() {
+                changePinForm.style.display = 'block';
+                changePinButton.style.display = 'none';
+            });
+        }
+        
+        if (cancelPinButton) {
+            cancelPinButton.addEventListener('click', function() {
+                changePinForm.style.display = 'none';
+                changePinButton.style.display = 'inline-block';
+            });
+        }
+        
+        if (updatePinForm) {
+            updatePinForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const newPin = document.getElementById('new-pin').value;
+                
+                // Validate PIN format
+                if (!/^\d{4}$/.test(newPin)) {
+                    alert('PIN must be exactly 4 digits.');
+                    return;
+                }
+                
+                // Send the update to the server
+                fetch('/api/users.php?id={{id}}', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: '{{name}}',
+                        email: '{{email}}',
+                        pin: newPin,
+                        role_id: {{#role}}{{id}}{{/role}},
+                        is_active: {{is_active}},
+                        comment: '{{comment}}',
+                        authorizations: [{{#authorizations}}{{.}},{{/authorizations}}]
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else if (response.status === 403) {
+                        throw new Error('Your session has expired. Please login again.');
+                    } else {
+                        throw new Error('Failed to update PIN.');
+                    }
+                })
+                .then(data => {
+                    // Refresh the page to show the updated PIN
+                    window.location.reload();
+                })
+                .catch(error => {
+                    alert(error.message);
+                });
+            });
+        }
+    });
+</script>
 {{/user}}

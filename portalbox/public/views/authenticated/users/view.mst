@@ -26,6 +26,8 @@
 				<dd><a href="mailto:{{email}}">{{email}}</a></dd>
 				<dt>Comment:</dt>
 				<dd>{{comment}}</dd>
+				<dt>PIN:</dt>
+				<dd>{{pin}}</dd>
 				<dt>Active</dt>
 				<dd>{{#is_active}}<i class="material-icons">check_circle_outline</i>{{/is_active}}{{^is_active}}<i class="material-icons">highlight_off</i>{{/is_active}}</dd>
 				<dt>Role:</dt>
@@ -90,6 +92,20 @@
 		<input type="email" name="email" id="email" value="{{email}}" required />
 		<label for="comment" style="align-self:baseline">Comment:</label>
 		<textarea type="text" name="comment" id="comment">{{comment}}</textarea>
+		<label for="pin">PIN:</label>
+		<input type="text" name="pin" id="pin" value="{{pin}}" pattern="^\d{4}$" required maxlength="4" />
+		<div class="help">
+			<label for="pin-help-toggle">
+				<i class="material-icons">help</i>
+			</label>
+			<input type="checkbox" id="pin-help-toggle" class="checkbox-hack">
+			<div class="content">
+				<label for="pin-help-toggle" class="scrim"></label>
+				<div>
+					<p>PIN must be exactly 4 digits (0-9).</p>
+				</div>
+			</div>
+		</div>
 		<label for="is_active">Active:</label>
 		<input type="checkbox" name="is_active" id="is_active" {{#is_active}}checked {{/is_active}}/>
 		{{#role_editable}}
