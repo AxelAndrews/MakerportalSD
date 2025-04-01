@@ -1570,80 +1570,48 @@ class Application {
 	update_user_pin(id, pin) {
 		// First get the full user data
 		User.read(id).then(user => {
-			// Update just the PIN field
-			user.pin = pin;
+			// Create update object with required fields
+			const updateData = {
+				name: user.name,
+				email: user.email,
+				comment: user.comment || '',
+				pin: pin,
+				role_id: user.role.id,
+				is_active: user.is_active,
+				authorizations: user.authorizations || []
+			};
 			
 			// Send the update back to the server
-			User.modify(id, user).then(_ => {
-				// Refresh page to show updated PIN
-				this.navigate("/profile");
-			}).catch(e => this.handleError(e));
+			User.modify(id, updateData).then(_ => {
+				// Show success message
+				alert('PIN updated successfully!');
+				
+				// Update the display without refreshing the page
+				const pinDisplay = document.getElementById('pin-display-container');
+				if (pinDisplay) {
+					pinDisplay.innerHTML = pin + ' <button type="button" onclick="document.getElementById(\'pin-display-container\').style.display=\'none\'; document.getElementById(\'pin-edit-container\').style.display=\'block\';" class="default">Change PIN</button>';
+					pinDisplay.style.display = 'block';
+				}
+				
+				const pinEditContainer = document.getElementById('pin-edit-container');
+				if (pinEditContainer) {
+					pinEditContainer.style.display = 'none';
+				}
+				
+				// Also update the current user object
+				if (this.user && this.user.id === id) {
+					this.user.pin = pin;
+				}
+			}).catch(e => {
+				alert('Error updating PIN: ' + e.message);
+				console.error('PIN update error:', e);
+				this.handleError(e);
+			});
 		}).catch(e => this.handleError(e));
 	}
 
 	setupProfilePinHandlers() {
-		// Using setTimeout to ensure the DOM is fully loaded
-		setTimeout(() => {
-		  const changePinButton = document.getElementById('change-pin-button');
-		  const changePinForm = document.getElementById('change-pin-form');
-		  const cancelPinButton = document.getElementById('cancel-pin-button');
-		  const updatePinForm = document.getElementById('update-pin-form');
-		  
-		  if (changePinButton) {
-			changePinButton.addEventListener('click', function() {
-			  changePinForm.style.display = 'block';
-			  changePinButton.style.display = 'none';
-			});
-		  }
-		  
-		  if (cancelPinButton) {
-			cancelPinButton.addEventListener('click', function() {
-			  changePinForm.style.display = 'none';
-			  changePinButton.style.display = 'inline-block';
-			});
-		  }
-		  
-		  if (updatePinForm) {
-			updatePinForm.addEventListener('submit', (e) => {
-			  e.preventDefault();
-			  const newPin = document.getElementById('new-pin').value;
-			  
-			  // Validate PIN format
-			  if (!/^\d{4}$/.test(newPin)) {
-				alert('PIN must be exactly 4 digits.');
-				return;
-			  }
-			  
-			  // Get the user ID from the current user
-			  const userId = this.user.id;
-			  
-			  // Update the PIN
-			  User.read(userId).then(userData => {
-				// Create update object with only necessary fields
-				const updateData = {
-				  name: userData.name,
-				  email: userData.email,
-				  comment: userData.comment || '',
-				  pin: newPin,
-				  role_id: userData.role.id,
-				  is_active: userData.is_active,
-				  authorizations: userData.authorizations || []
-				};
-				
-				return User.modify(userId, updateData);
-			  })
-			  .then(() => {
-				alert('PIN updated successfully');
-				// Refresh the page to show the updated PIN
-				window.location.reload();
-			  })
-			  .catch(error => {
-				alert('Error updating PIN: ' + error);
-				console.error(error);
-			  });
-			});
-		  }
-		}, 100);
+		// Empty because implemented in profile.mst
 	  }
 
 	/**

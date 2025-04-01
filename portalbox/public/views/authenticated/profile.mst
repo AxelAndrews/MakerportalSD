@@ -65,66 +65,20 @@
 </article>
 
 <script>
-window.updatePin = function() {
-    const newPin = document.getElementById('new-pin').value;
-    
-    if (!/^\d{4}$/.test(newPin)) {
-        alert('PIN must be exactly 4 digits (0-9).');
-        return;
-    }
-    
-    const updateData = {
-        name: "{{name}}",
-        email: "{{email}}",
-        pin: newPin,
-        role_id: {{#role}}{{id}}{{/role}},
-        is_active: {{is_active}}
-    };
-    
-    {{#comment}}
-    updateData.comment = "{{comment}}";
-    {{/comment}}
-    
-    updateData.authorizations = [{{#authorizations}}{{.}},{{/authorizations}}];
-    
-    const url = '/users.php?id={{id}}';
-    console.log('Fetching URL:', url);
-    
-    fetch(url, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updateData)
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.text().then(text => {
-                throw new Error(`Failed to update PIN: ${text}`);
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        alert('PIN updated successfully!');
-        const pinDisplay = document.getElementById('pin-display-container');
-        pinDisplay.innerHTML = newPin + ' <button type="button" onclick="document.getElementById(\'pin-display-container\').style.display=\'none\'; document.getElementById(\'pin-edit-container\').style.display=\'block\';" class="default">Change PIN</button>';
-        pinDisplay.style.display = 'block';
-        document.getElementById('pin-edit-container').style.display = 'none';
-    })
-    .catch(error => {
-        alert('Error updating PIN: ' + error.message);
-        console.error('PIN update error:', error);
-    });
-};
-
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('change-pin-form');
     if (form) {
         form.addEventListener('submit', function(event) {
             event.preventDefault();
-            window.updatePin();
+            const newPin = document.getElementById('new-pin').value;
+            
+            if (!/^\d{4}$/.test(newPin)) {
+                alert('PIN must be exactly 4 digits (0-9).');
+                return;
+            }
+            
+            // Call the app.update_user_pin method with the user ID and new PIN
+            app.update_user_pin({{id}}, newPin);
         });
     }
 });
