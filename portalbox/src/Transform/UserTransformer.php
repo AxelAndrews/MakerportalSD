@@ -37,12 +37,6 @@ class UserTransformer implements InputTransformer, OutputTransformer {
 		if(!array_key_exists('is_active', $data)) {
 			throw new InvalidArgumentException('\'is_active\' is a required field');
 		}
-		if(array_key_exists('pin', $data)) {
-			if (!preg_match('/^\d{4}$/', $data['pin'])) {
-				throw new InvalidArgumentException('\'pin\' must be a 4-digit number');
-			}
-			$user->set_pin($data['pin']);
-		}
 
 		$role = (new RoleModel(Config::config()))->read($data['role_id']);
 		if(NULL === $role) {
@@ -59,6 +53,14 @@ class UserTransformer implements InputTransformer, OutputTransformer {
 		if(array_key_exists('comment', $data)) {
 			$user->set_comment($data['comment']);
 		}
+        
+		if(array_key_exists('pin', $data)) {
+			if (!preg_match('/^\d{4}$/', $data['pin'])) {
+				throw new InvalidArgumentException('\'pin\' must be a 4-digit number');
+			}
+			$user->set_pin($data['pin']);
+		}
+        
 		if(array_key_exists('authorizations', $data)) {
 			if(!is_array($data['authorizations'])) {
 				throw new InvalidArgumentException('\'authorizations\' must be a list of equipment type ids');

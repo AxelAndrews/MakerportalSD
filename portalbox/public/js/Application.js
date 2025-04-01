@@ -704,6 +704,7 @@ class Application {
 						if(values[1].length + values[2].length > 20) {
 							this.toggle_transactions();
 						}
+						this.setupProfilePinHandlers();
 					});
 				}).catch(e => this.handleError(e));
 			});
@@ -1365,19 +1366,62 @@ class Application {
 	}
 
 	/**
-	 * Callback that handles adding a user to the backend. Bound
-	 * to the form.submit() in moostaka.render() for the view
+	 * Callback that handles adding a user to the backend with enhanced error handling
 	 *
 	 * @param {Event} event - the form submission event
 	 */
 	add_user(event) {
 		event.preventDefault();
 		let data = this.get_form_data(event.target);
-
-		User.create(data).then(_ => {
-			this.navigate("/users");
-			// notify user of success
-		}).catch(e => this.handleError(e));
+		
+		// Validate PIN format
+		if (data.pin && !/^\d{4}$/.test(data.pin)) {
+		alert('PIN must be exactly 4 digits');
+		return;
+		}
+		
+		// Ensure authorizations is an array
+		if (data.authorizations && !Array.isArray(data.authorizations)) {
+		// If not array, convert from object format to array format
+		let authArray = [];
+		for (let key in data.authorizations) {
+			if (data.authorizations[key]) {
+			authArray.push(parseInt(key));
+			}
+		}
+		data.authorizations = authArray;
+		}
+		
+		// Log the data for debugging
+		console.log("Creating user with data:", JSON.stringify(data));
+		
+		// Make the API call with enhanced error handling
+		fetch("/api/users.php", {
+		body: JSON.stringify(data),
+		credentials: "include",
+		headers: {
+			"Content-Type": "application/json"
+		},
+		method: "PUT"
+		})
+		.then(response => {
+		if (!response.ok) {
+			return response.text().then(text => {
+			throw new Error(`Server responded with ${response.status}: ${text}`);
+			});
+		}
+		return response.json();
+		})
+		.then(_ => {
+		this.navigate("/users");
+		// notify user of success
+		alert("User created successfully");
+		})
+		.catch(e => {
+		console.error("Error creating user:", e);
+		alert("Failed to create user: " + e.message);
+		this.handleError(e);
+		});
 	}
 
 	/**
@@ -1486,6 +1530,9 @@ class Application {
 				if(values[3].length + values[4].length > 20) {
 					this.toggle_transactions();
 				}
+				if (id == this.user.id) {
+					this.setupProfilePinHandlers();
+				}
 				this.set_icon_colors(document);
 			});
 		}).catch(e => this.handleError(e));
@@ -1501,11 +1548,95 @@ class Application {
 	update_user(id, event) {
 		event.preventDefault();
 		let data = this.get_form_data(event.target);
-
+		
+		// Validate PIN format
+		if (data.pin && !/^\d{4}$/.test(data.pin)) {
+			alert('PIN must be exactly 4 digits');
+			return;
+		}
+	
 		User.modify(id, data).then(_ => {
 			this.navigate("/users/" + id);
 			// notify user of success
 		}).catch(e => this.handleError(e));
+	}
+
+	/**
+	 * Update user PIN from profile page
+	 * 
+	 * @param {Integer} id - the unique id of the user
+	 * @param {String} pin - the new PIN
+	 */
+	update_user_pin(id, pin) {
+		// First get the full user data
+		User.read(id).then(user => {
+			// Update just the PIN field
+			user.pin = pin;
+			
+			// Send the update back to the server
+			User.modify(id, user).then(_ => {
+				// Refresh page to show updated PIN
+				this.navigate("/profile");
+			}).catch(e => this.handleError(e));
+		}).catch(e => this.handleError(e));
+	}
+
+	/**
+	 * Set up event handlers for the profile page PIN functionality
+	 */
+	setupProfilePinHandlers() {
+		const changePinButton = document.getElementById('change-pin-button');
+		const changePinForm = document.getElementById('change-pin-form');
+		const cancelPinButton = document.getElementById('cancel-pin-button');
+		const updatePinForm = document.getElementById('update-pin-form');
+		
+		if (changePinButton) {
+		changePinButton.addEventListener('click', function() {
+			changePinForm.style.display = 'block';
+			changePinButton.style.display = 'none';
+		});
+		}
+		
+		if (cancelPinButton) {
+		cancelPinButton.addEventListener('click', function() {
+			changePinForm.style.display = 'none';
+			changePinButton.style.display = 'inline-block';
+		});
+		}
+		
+		if (updatePinForm) {
+		updatePinForm.addEventListener('submit', (e) => {
+			e.preventDefault();
+			const newPin = document.getElementById('new-pin').value;
+			
+			// Validate PIN format
+			if (!/^\d{4}$/.test(newPin)) {
+			alert('PIN must be exactly 4 digits.');
+			return;
+			}
+			
+			// Get the user ID from the current user
+			const userId = this.user.id;
+			
+			// Get existing user data
+			User.read(userId).then(userData => {
+			// Update only the PIN field
+			userData.pin = newPin;
+			
+			// Send the update to the server
+			return User.modify(userId, userData);
+			})
+			.then(() => {
+			alert('PIN updated successfully');
+			// Refresh the page to show the updated PIN
+			window.location.reload();
+			})
+			.catch(error => {
+			alert('Error updating PIN: ' + error);
+			console.error(error);
+			});
+		});
+		}
 	}
 
 	/**

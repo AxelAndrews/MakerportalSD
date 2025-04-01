@@ -15,9 +15,10 @@ export class User {
 	 * @param {string}  profile_image_url
 	 * @param {bool}    is_active
 	 * @param {array}   authorizations
+	 * @param {string}  pin - User's 4-digit PIN
 	 * 
 	 */
-	constructor(id, role, name, email, comment, profile_image_url, is_active, authorizations) {
+	constructor(id, role, name, email, comment, profile_image_url, is_active, authorizations, pin = '0000') {
 		this.id = id;
 		this.role = role;
 		this.name = name;
@@ -26,6 +27,7 @@ export class User {
 		this.profile_image_url = profile_image_url;
 		this.is_active = is_active;
 		this.authorizations = authorizations;
+		this.pin = pin;
 	}
 
 	/**
@@ -64,7 +66,8 @@ export class User {
 				data.comment,
 				null,
 				true,
-				data.authorizations
+				data.authorizations,
+				data.pin
 			);
 		});
 	}
