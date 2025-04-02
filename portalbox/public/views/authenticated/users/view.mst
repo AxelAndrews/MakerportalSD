@@ -8,7 +8,7 @@
 {{^editable}}{{#authorizable}}<input type="radio" name="view-edit-toggle" id="view-edit-toggle-view-state" class="checkbox-hack" checked />{{/authorizable}}{{/editable}}
 <article>
 	<header>
-		<h1>User: {{name}}</h1>
+		<h1>User1: {{name}}</h1>
 	</header>
 	<div class="row">
 		<section>

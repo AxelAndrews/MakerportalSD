@@ -360,6 +360,15 @@ class Application {
 			system: null
 		};
 
+		if(this.user.has_permission(Permission.READ_OWN_USER)) {
+			this.route("/profile", _ => {
+			  console.log("Profile route handler called");
+			  
+			  // Don't use read_user - create a dedicated profile loading function
+			  this.loadProfilePage(this.user.id);
+			});
+		}
+
 		// User needs CREATE_API_KEY Permission to make use of /api-keys/add route
 		if(this.user.has_permission(Permission.CREATE_API_KEY)) {
 			this.route("/api-keys/add", _ => {
@@ -644,76 +653,6 @@ class Application {
 				this.user.has_permission(Permission.MODIFY_ROLE), this.user.has_permission(Permission.CREATE_PAYMENT)));
 		}
 
-		if(this.user.has_permission(Permission.READ_OWN_USER)) {
-			this.route("/profile", _ => {
-				let p0 = User.read(this.user.id);
-				let p1 = Charge.list("user_id=" + this.user.id);
-				let p2 = Payment.list("user_id=" + this.user.id);
-				let p3 = EquipmentType.list();
-				let p4 = Role.list()
-
-				Promise.all([p0, p1, p2, p3, p4]).then(values => {
-					let user = values[0];
-					let ledger = values[1].concat(values[2]).map(e => {
-						e.ts = new Date(e.time);
-						return e;
-					}).sort((a,b) => {
-						return a.ts - b.ts
-					});
-
-					let formatter = new Intl.NumberFormat('en-US', {
-						style: 'currency',
-						currency: 'USD'
-					});
-
-					let total_charges = values[1].map(e => Number.parseFloat(e.amount)).reduce((a, c) => a + c, 0.0);
-					let total_payments = values[2].map(e => Number.parseFloat(e.amount)).reduce((a, c) => a + c, 0.0);
-					let total_balance = formatter.format(Number(Math.round((total_payments - total_charges)+'e2')+'e-2'));
-					let authorized_equipment_types = values[3].filter(type => user.authorizations.includes(type.id));
-
-					ledger = ledger.reduce(function(new_ledger, transaction) {
-						transaction.amount = parseFloat(transaction.amount);
-						if("charge_policy" in transaction) {
-							transaction.amount *= -1;
-						}
-
-						if(new_ledger.length > 0) {
-							transaction.balance = new_ledger[new_ledger.length-1].balance + transaction.amount;
-						} else {
-							transaction.balance = transaction.amount;
-						}
-
-						new_ledger.push(transaction);
-						return new_ledger;
-					}, []).map((transaction) => {
-						transaction.balance = formatter.format(transaction.balance);
-						transaction.amount = formatter.format(transaction.amount);
-						return transaction;
-					});
-					let roles = values[4].filter(role => "unauthenticated" != role.name);
-
-					this.render("#main", "authenticated/profile", {
-						"total_balance": total_balance,
-						"equipment_type": authorized_equipment_types,
-						"ledger": ledger,
-						"user": user,
-						"roles": roles,
-						"role_editable": false
-					}, {}, () => {
-						this.read_user(this.user.id, true, false, false, false);
-						let transaction_button = null;
-						transaction_button = document.getElementById("transaction-button");
-						if(transaction_button) {
-							transaction_button.addEventListener("click", (e) => {this.toggle_transactions();});
-						}
-						if(values[1].length + values[2].length > 20) {
-							this.toggle_transactions();
-						}
-					});
-				}).catch(e => this.handleError(e));
-			});
-		}
-
 		// Everyone gets a home route; what it presents them is controlled by home_icons
 		this.route("/", _ => {
 			this.render("#main", "authenticated/top-menu", {"features":home_icons});
@@ -733,6 +672,129 @@ class Application {
 				});
 			}).catch(e => this.handleError(e));
 		});
+	}
+	loadProfilePage(userId) {
+		console.log("Loading profile page for user ID:", userId);
+		
+		let p0 = User.read(userId);
+		let p1 = EquipmentType.list();
+		let p2 = Role.list();
+		let p3 = Charge.list("user_id=" + userId);
+		let p4 = Payment.list("user_id=" + userId);
+	  
+		Promise.all([p0, p1, p2, p3, p4]).then(values => {
+		  let currency_formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+		  let date_formatter = new Intl.DateTimeFormat();
+		  let user = values[0];
+		  let equipment_types = values[1];
+		  let roles = values[2].filter(role => "unauthenticated" != role.name);
+		  let authorized_equipment_types = equipment_types.filter(type => user.authorizations.includes(type.id));
+	  
+		  let total_charges = values[3].map(e => Number.parseFloat(e.amount)).reduce((a, c) => a + c, 0.0);
+		  let total_payments = values[4].map(e => Number.parseFloat(e.amount)).reduce((a, c) => a + c, 0.0);
+		  let balance = currency_formatter.format(Number(Math.round((total_payments - total_charges)+'e2')+'e-2'));
+		  let ledger = values[3].concat(values[4]).map(e => {
+			e.ts = new Date(e.time);
+			e.time = date_formatter.format(e.ts);
+			return e;
+		  }).sort((a, b) => {
+			return a.ts - b.ts;
+		  });
+	  
+		  ledger = ledger.reduce(function(new_ledger, transaction) {
+			transaction.amount = parseFloat(transaction.amount);
+			if("charge_policy" in transaction) {
+			  transaction.amount *= -1;
+			}
+	  
+			if(new_ledger.length > 0) {
+			  transaction.balance = new_ledger[new_ledger.length-1].balance + transaction.amount;
+			} else {
+			  transaction.balance = transaction.amount;
+			}
+	  
+			new_ledger.push(transaction);
+			return new_ledger;
+		  }, []).map((transaction) => {
+			transaction.balance = currency_formatter.format(transaction.balance);
+			transaction.amount = currency_formatter.format(transaction.amount);
+			return transaction;
+		  });
+	  
+		  // Always use profile.mst - never use view.mst for profile page
+		  console.log("Rendering profile.mst template");
+		  
+		  this.render("#main", "authenticated/profile", {
+			"user": user,
+			"equipment_types": equipment_types,
+			"roles": roles,
+			"authorized_equipment_types": authorized_equipment_types,
+			"ledger": ledger,
+			"balance": balance,
+			"editable": true   // Profile is always editable
+		  }, {}, () => {
+			// Set up form submission
+			let form = document.getElementById("edit-user-form");
+			if(form) {
+			  console.log("Setting up profile form submission handler");
+			  form.addEventListener("submit", (e) => {
+				e.preventDefault();
+				this.updateProfile(userId, e);
+			  });
+			}
+			
+			let transaction_button = document.getElementById("transaction-button");
+			if(transaction_button) {
+			  transaction_button.addEventListener("click", (e) => {
+				this.toggle_transactions();
+			  });
+			}
+			
+			if(values[3].length + values[4].length > 20) {
+			  this.toggle_transactions();
+			}
+			
+			this.set_icon_colors(document);
+		  });
+		}).catch(e => this.handleError(e));
+	}
+	updateProfile(userId, event) {
+		console.log("Updating profile for user ID:", userId);
+		
+		// Get form data
+		let data = this.get_form_data(event.target);
+		console.log("Profile form data:", data);
+		
+		// Ensure required fields are present
+		if (!data.role_id) {
+		  data.role_id = this.user.role.id;
+		}
+		
+		if (data.is_active === undefined) {
+		  data.is_active = true;
+		} else if (typeof data.is_active === 'string') {
+		  data.is_active = (data.is_active.toLowerCase() === 'true');
+		}
+		
+		// Validate PIN
+		if (data.pin && !/^\d{4}$/.test(data.pin)) {
+		  alert('PIN must be exactly 4 digits');
+		  return;
+		}
+		
+		// Make the API request
+		User.modify(userId, data)
+		  .then(_ => {
+			console.log("Profile update successful");
+			// Always stay on profile page
+			this.navigate("/profile");
+			alert("Profile updated successfully");
+		  })
+		  .catch(e => {
+			console.error("Profile update failed:", e);
+			alert("Failed to update profile: " + e);
+			this.handleError(e);
+		  });
 	}
 
 	/**
@@ -770,37 +832,56 @@ class Application {
 	 *     group of inputs.
 	 */
 	get_form_data(form) {
-		// should check that form is a form
-
-		let data = {};
-		for(let i = 0, len = form.elements.length; i < len; i++) {
-			let field = form.elements[i];
-			if(field.hasAttribute("name")) {
-				let parts = field.name.split('.').reverse();
-				let key = parts.pop();
-				if(1 == parts.length && field.hasAttribute("type") && "checkbox" == field.type) {
-					if(undefined === data[key]) {
-						data[key] = [];
-					}
-					if(field.checked) {
-						data[key].push(parts.pop());
-					}
-				} else {
-					// checkboxes are weird they have a checked property
-					if(field.hasAttribute("type") && "checkbox" == field.type) {
-						if(field.checked) {
-							data[key] = true;
-						} else {
-							data[key] = false;
-						}
-					} else {
-						// text inputs, selects, radio buttons have a value property
-						data[key] = field.value;
-					}
-				}
-			}
+		// Check that form is a form element
+		if (!(form instanceof HTMLFormElement)) {
+		  console.error("get_form_data called with non-form element:", form);
+		  return {};
 		}
-
+	  
+		let data = {};
+		// Log all form elements for debugging
+		console.log("Form elements:", form.elements.length);
+		
+		for(let i = 0, len = form.elements.length; i < len; i++) {
+		  let field = form.elements[i];
+		  
+		  // Skip elements without a name
+		  if(!field.hasAttribute("name") || !field.name) {
+			continue;
+		  }
+		  
+		  // Log each field for debugging
+		  console.log(`Processing field: ${field.name}, type: ${field.type}, value: ${field.value}`);
+		  
+		  let parts = field.name.split('.').reverse();
+		  let key = parts.pop();
+		  
+		  // Handle array-structured data (e.g., name.foo.bar)
+		  if(1 == parts.length && field.hasAttribute("type") && "checkbox" == field.type) {
+			if(undefined === data[key]) {
+			  data[key] = [];
+			}
+			if(field.checked) {
+			  data[key].push(parts.pop());
+			}
+		  } else {
+			// Handle different field types appropriately
+			if(field.hasAttribute("type") && "checkbox" == field.type) {
+			  data[key] = field.checked;
+			} else if(field.hasAttribute("type") && "hidden" == field.type) {
+			  // Make sure hidden fields are captured properly
+			  data[key] = field.value;
+			  console.log(`Hidden field: ${key} = ${field.value}`);
+			} else {
+			  // Standard fields (text, select, etc.)
+			  data[key] = field.value;
+			}
+		  }
+		}
+		
+		// Log the final data object
+		console.log("Final form data:", JSON.stringify(data));
+		
 		return data;
 	}
 
@@ -1458,87 +1539,113 @@ class Application {
 		let p2 = Role.list();
 		let p3 = Charge.list("user_id=" + id);
 		let p4 = Payment.list("user_id=" + id);
-
+	  
 		Promise.all([p0,p1,p2,p3,p4]).then(values => {
-			let currency_formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
-			let date_formatter = new Intl.DateTimeFormat();
-			let user = values[0];
-			let equipment_types = values[1];
-			let roles = values[2].filter(role => "unauthenticated" != role.name);
-			let authorized_equipment_types = equipment_types.filter(type => user.authorizations.includes(type.id));
-
-			let total_charges = values[3].map(e => Number.parseFloat(e.amount)).reduce((a, c) => a + c, 0.0);
-			let total_payments = values[4].map(e => Number.parseFloat(e.amount)).reduce((a, c) => a + c, 0.0);
-			let balance = currency_formatter.format(Number(Math.round((total_payments - total_charges)+'e2')+'e-2'));
-			let ledger = values[3].concat(values[4]).map(e => {
-				e.ts = new Date(e.time);
-				e.time = date_formatter.format(e.ts);
-				return e;
-			}).sort((a, b) => {
-				return a.ts - b.ts;
-			});
-
-			ledger = ledger.reduce(function(new_ledger, transaction) {
-				transaction.amount = parseFloat(transaction.amount);
-				if("charge_policy" in transaction) {
-					transaction.amount *= -1;
-				}
-
-				if(new_ledger.length > 0) {
-					transaction.balance = new_ledger[new_ledger.length-1].balance + transaction.amount;
-				} else {
-					transaction.balance = transaction.amount;
-				}
-
-				new_ledger.push(transaction);
-				return new_ledger;
-			}, []).map((transaction) => {
-				transaction.balance = currency_formatter.format(transaction.balance);
-				transaction.amount = currency_formatter.format(transaction.amount);
-				return transaction;
-			});
-
-			this.render("#main", "authenticated/users/view", {
-					"user":user,
-					"equipment_types":equipment_types,
-					"roles":roles,
-					"authorized_equipment_types":authorized_equipment_types,
-					"ledger":ledger,
-					"balance":balance,
-					"editable": editable,
-					"authorizable":authorizable,
-					"role_editable": role_editable,
-					"create_payment_permission": payment_permission
-			}, {}, () => {
-				let selector = document.getElementById("role_id");
-				if(selector) {
-					selector.value = user.role.id;
-				}
-				for(const authorization of user.authorizations) {
-					document.getElementById("authorizations." + authorization).checked = true;
-				}
-				let form = null;
-				form = document.getElementById("edit-user-form");
-				if(form) {
-					form.addEventListener("submit", (e) => { this.update_user(id, e); });
-				}
-				form = document.getElementById("authorize-user-form");
-				if(form) {
-					form.addEventListener("submit", (e) => { this.authorize_user(id, e); });
-				}
-				let transaction_button = null;
-				transaction_button = document.getElementById("transaction-button");
-				if(transaction_button) {
-					transaction_button.addEventListener("click", (e) => {this.toggle_transactions();});
-				}
-				if(values[3].length + values[4].length > 20) {
-					this.toggle_transactions();
-				}
-				if (id == this.user.id) {
-					this.setupProfilePinHandlers();
-				}
-				this.set_icon_colors(document);
-			});
+		  let currency_formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+		  let date_formatter = new Intl.DateTimeFormat();
+		  let user = values[0];
+		  let equipment_types = values[1];
+		  let roles = values[2].filter(role => "unauthenticated" != role.name);
+		  let authorized_equipment_types = equipment_types.filter(type => user.authorizations.includes(type.id));
+	  
+		  let total_charges = values[3].map(e => Number.parseFloat(e.amount)).reduce((a, c) => a + c, 0.0);
+		  let total_payments = values[4].map(e => Number.parseFloat(e.amount)).reduce((a, c) => a + c, 0.0);
+		  let balance = currency_formatter.format(Number(Math.round((total_payments - total_charges)+'e2')+'e-2'));
+		  let ledger = values[3].concat(values[4]).map(e => {
+			e.ts = new Date(e.time);
+			e.time = date_formatter.format(e.ts);
+			return e;
+		  }).sort((a, b) => {
+			return a.ts - b.ts;
+		  });
+	  
+		  ledger = ledger.reduce(function(new_ledger, transaction) {
+			transaction.amount = parseFloat(transaction.amount);
+			if("charge_policy" in transaction) {
+			  transaction.amount *= -1;
+			}
+	  
+			if(new_ledger.length > 0) {
+			  transaction.balance = new_ledger[new_ledger.length-1].balance + transaction.amount;
+			} else {
+			  transaction.balance = transaction.amount;
+			}
+	  
+			new_ledger.push(transaction);
+			return new_ledger;
+		  }, []).map((transaction) => {
+			transaction.balance = currency_formatter.format(transaction.balance);
+			transaction.amount = currency_formatter.format(transaction.amount);
+			return transaction;
+		  });
+	  
+		  // Determine which template to use based on whether this is the profile page
+		  const isProfilePage = id == this.user.id && location.pathname === "/profile";
+		  const template = isProfilePage ? 
+			"authenticated/profile" : 
+			"authenticated/users/view";
+		  
+		  console.log("Using template:", template, "for user ID:", id);
+		  console.log("Current user ID:", this.user.id);
+		  console.log("Is profile page:", isProfilePage);
+	  
+		  this.render("#main", template, {
+			  "user": user,
+			  "equipment_types": equipment_types,
+			  "roles": roles,
+			  "authorized_equipment_types": authorized_equipment_types,
+			  "ledger": ledger,
+			  "balance": balance,
+			  "editable": editable,
+			  "authorizable": authorizable,
+			  "role_editable": role_editable,
+			  "create_payment_permission": payment_permission
+		  }, {}, () => {
+			let selector = document.getElementById("role_id");
+			if(selector) {
+			  selector.value = user.role.id;
+			}
+			for(const authorization of user.authorizations) {
+			  let authElement = document.getElementById("authorizations." + authorization);
+			  if (authElement) {
+				authElement.checked = true;
+			  }
+			}
+			
+			// Setup form event handlers
+			let form = null;
+			form = document.getElementById("edit-user-form");
+			if(form) {
+			  console.log("Adding submit handler to edit-user-form");
+			  // Remove any existing event listeners
+			  const newForm = form.cloneNode(true);
+			  form.parentNode.replaceChild(newForm, form);
+			  form = newForm;
+			  
+			  // Add new event listener
+			  form.addEventListener("submit", (e) => { 
+				console.log("Form submitted for user ID:", id);
+				this.update_user(id, e); 
+			  });
+			}
+			
+			form = document.getElementById("authorize-user-form");
+			if(form) {
+			  form.addEventListener("submit", (e) => { this.authorize_user(id, e); });
+			}
+			
+			let transaction_button = null;
+			transaction_button = document.getElementById("transaction-button");
+			if(transaction_button) {
+			  transaction_button.addEventListener("click", (e) => {this.toggle_transactions();});
+			}
+			
+			if(values[3].length + values[4].length > 20) {
+			  this.toggle_transactions();
+			}
+			
+			this.set_icon_colors(document);
+		  });
 		}).catch(e => this.handleError(e));
 	}
 
@@ -1551,21 +1658,65 @@ class Application {
 	 */
 	update_user(id, event) {
 		event.preventDefault();
+		
+		// Get form data
 		let data = this.get_form_data(event.target);
-		console.log(data)
+		
+		// Debug logging
+		console.log("Update user called for ID:", id);
+		console.log("Form data:", JSON.stringify(data));
+		
+		// CRITICAL FIX: Ensure role_id is included for profile form
+		if (!data.role_id && this.user && id == this.user.id) {
+		  console.log("Adding missing role_id from current user");
+		  data.role_id = this.user.role.id;
+		}
 		
 		// Validate PIN format
 		if (data.pin && !/^\d{4}$/.test(data.pin)) {
-			alert('PIN must be exactly 4 digits');
-			return;
+		  alert('PIN must be exactly 4 digits');
+		  return;
 		}
-	
-		User.modify(id, data).then(_ => {
-			this.navigate("/users/" + id);
-			// notify user of success
-		}).catch(e => this.handleError(e));
+		
+		// Make sure is_active is properly formatted
+		if (typeof data.is_active === 'string') {
+		  data.is_active = (data.is_active.toLowerCase() === 'true');
+		} else if (data.is_active === undefined) {
+		  // If is_active is missing, default to true for profile updates
+		  data.is_active = true;
+		}
+		
+		// Double-check all required fields are present
+		const requiredFields = ['name', 'email', 'role_id', 'is_active'];
+		const missingFields = requiredFields.filter(field => data[field] === undefined);
+		
+		if (missingFields.length > 0) {
+		  console.error("Missing required fields:", missingFields);
+		  alert("Cannot update user: Missing required fields: " + missingFields.join(", "));
+		  return;
+		}
+		
+		console.log("Final data being sent to API:", JSON.stringify(data));
+		
+		// Make the API request
+		User.modify(id, data)
+		  .then(_ => {
+			console.log("User update succeeded");
+			// For profile updates, stay on the profile page
+			if (id == this.user.id) {
+			  this.navigate("/profile");
+			} else {
+			  this.navigate("/users/" + id);
+			}
+			// Notify user of success
+			alert("User information updated successfully");
+		  })
+		  .catch(e => {
+			console.error("Update user error:", e);
+			alert("Failed to update user: " + e);
+			this.handleError(e);
+		  });
 	}
-
 	/**
 	 * Update user PIN from profile page
 	 * 
