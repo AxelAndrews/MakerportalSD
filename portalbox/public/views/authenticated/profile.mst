@@ -7,80 +7,93 @@
    <header>
    	<h1>Profile</h1>
    </header>
-   <dl>
-   	<dt>Name:</dt>
-   	<dd>{{name}}</dd>
-   	<dt>Email:</dt>
-   	<dd><a href="mailto:{{email}}">{{email}}</a></dd>
-   	<dt>PIN:</dt>
-   	<dd>
-   	<div id="pin-display-container">
-   		{{pin}} 
-   		<button type="button" onclick="document.getElementById('pin-display-container').style.display='none'; document.getElementById('pin-edit-container').style.display='block';" class="default">Change PIN</button>
-   	</div>
-   	
-   	<div id="pin-edit-container" style="display:none;">
-   		<form id="change-pin-form" action="#" method="POST">
-   		<input type="text" id="new-pin" value="{{pin}}" pattern="^\d{4}$" maxlength="4" required style="width:100px; margin-right:10px;">
-   		<div class="button-group" style="display:inline-block; margin-top:0;">
-   			<button type="submit" class="default" style="margin:0 10px 0 0; min-width:80px;">Save</button>
-   			<button type="button" style="margin:0; min-width:80px;" onclick="document.getElementById('pin-display-container').style.display='block'; document.getElementById('pin-edit-container').style.display='none';">Cancel</button>
-   		</div>
-   		</form>
-   	</div>
-   	</dd>
-   	<dt>Authorized for:</dt>
-   	<dd>
-   		{{#equipment_type}}
-   		<ul>
-   			<li>{{name}}</li>
-   		</ul>
-   		{{/equipment_type}}
-   		{{^equipment_type}}Not yet Authorized for any Equipment{{/equipment_type}}
-   	</dd>
-   	<dt>Charge/Payment History:</dt>
-   	<dd>
-   		<div class="button-group">
-   			<button type="button" id="transaction-button">Hide Transactions</button>
-   		</div>
-   		<table id="transaction-table">
-   			<thead class="collapsible-content">
-   				<tr><th>Date</th><th>Equipment</th><th>Amount</th><th>Balance</th></tr>
-   			</thead>
-   			<tbody class="collapsible-content">
-   				{{#ledger}}<tr{{#equipment_id}} class="debit"{{/equipment_id}}>
-   					<td>{{time}}</td>
-   					<td>{{^equipment_id}}- Credit -{{/equipment_id}}{{#equipment}}{{.}}{{/equipment}}{{#charge_policy}} ({{.}}){{/charge_policy}}</td>
-   					<td>{{amount}}</td>
-   					<td>{{balance}}</td>
-   				</tr>{{/ledger}}
-   				{{^ledger}}<tr><td colspan="3">No account activity to date</td></tr>{{/ledger}}
-   			</tbody>
-   			<tfoot>
-   				<tr><td colspan="2" style="text-align:right">Balance:</td><td>{{total_balance}}</td></tr>
-   			</tfoot>
-   		</table>
-   	</dd>
-   </dl>
+   <div class="row">
+      <section>
+         <header>
+            <h2>Details</h2>
+            <div class="button-group">
+               <label for="view-edit-toggle-edit-state">Edit</label>
+            </div>
+         </header>
+         <dl>
+            <dt>Name:</dt>
+            <dd>{{name}}</dd>
+            <dt>Email:</dt>
+            <dd><a href="mailto:{{email}}">{{email}}</a></dd>
+            <dt>PIN:</dt>
+            <dd id="pin-display">
+               {{pin}}
+               <button type="button" id="change-pin-button" class="default">Change PIN</button>
+            </dd>
+            <dt>Authorized for:</dt>
+            <dd>
+               {{#equipment_type}}
+               <ul>
+                  <li>{{name}}</li>
+               </ul>
+               {{/equipment_type}}
+               {{^equipment_type}}Not yet Authorized for any Equipment{{/equipment_type}}
+            </dd>
+         </dl>
+      </section>
+      <section>
+         <header>
+            <h2>Account History</h2>
+         </header>
+         <div class="button-group">
+            <button type="button" id="transaction-button">Hide Transactions</button>
+         </div>
+         <table style="min-width:100%" id="transaction-table">
+            <thead class="collapsible-content">
+               <tr><th>Date</th><th>Equipment</th><th>Amount</th><th>Balance</th></tr>
+            </thead>
+            <tbody class="collapsible-content">
+               {{#ledger}}<tr{{#equipment_id}} class="debit"{{/equipment_id}}>
+                  <td>{{time}}</td>
+                  <td>{{^equipment_id}}- Credit -{{/equipment_id}}{{#equipment}}{{.}}{{/equipment}}{{#charge_policy}} ({{.}}){{/charge_policy}}</td>
+                  <td>{{amount}}</td>
+                  <td>{{balance}}</td>
+               </tr>{{/ledger}}
+               {{^ledger}}<tr><td colspan="3">No account activity to date</td></tr>{{/ledger}}
+            </tbody>
+            <tfoot>
+               <tr><td colspan="2" style="text-align:right">Balance:</td><td>{{total_balance}}</td></tr>
+            </tfoot>
+         </table>
+      </section>
+   </div>
 </article>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('change-pin-form');
-    if (form) {
-        form.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const newPin = document.getElementById('new-pin').value;
-            
-            if (!/^\d{4}$/.test(newPin)) {
-                alert('PIN must be exactly 4 digits (0-9).');
-                return;
-            }
-            
-            // Call the app.update_user_pin method with the user ID and new PIN
-            app.update_user_pin({{id}}, newPin);
-        });
-    }
-});
-</script>
+<input type="radio" name="view-edit-toggle" id="view-edit-toggle-edit-state" class="checkbox-hack" />
+<article>
+   <header>
+      <h1>Profile</h1>
+      <div class="button-group">
+         <label for="view-edit-toggle-view-state">Cancel</label>
+         <button form="edit-user-form" type="submit" class="default">Save</button>
+      </div>
+   </header>
+   <form id="edit-user-form">
+      <label for="name">Name:</label>
+      <input type="text" name="name" id="name" value="{{name}}" required />
+      <label for="email">Email:</label>
+      <input type="email" name="email" id="email" value="{{email}}" required />
+      <label for="comment" style="align-self:baseline">Comment:</label>
+      <textarea type="text" name="comment" id="comment">{{comment}}</textarea>
+      <label for="pin">PIN:</label>
+      <input type="text" name="pin" id="pin" value="{{pin}}" pattern="^\d{4}$" required maxlength="4" />
+      <input type="hidden" name="role_id" value="{{role.id}}" />
+      <div class="help">
+         <label for="pin-help-toggle">
+            <i class="material-icons">help</i>
+         </label>
+         <input type="checkbox" id="pin-help-toggle" class="checkbox-hack">
+         <div class="content">
+            <label for="pin-help-toggle" class="scrim"></label>
+            <div>
+               <p>PIN must be exactly 4 digits (0-9).</p>
+            </div>
+         </div>
+      </div>
+   </form>
+</article>
 {{/user}}

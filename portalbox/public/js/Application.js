@@ -650,8 +650,9 @@ class Application {
 				let p1 = Charge.list("user_id=" + this.user.id);
 				let p2 = Payment.list("user_id=" + this.user.id);
 				let p3 = EquipmentType.list();
+				let p4 = Role.list()
 
-				Promise.all([p0, p1, p2, p3]).then(values => {
+				Promise.all([p0, p1, p2, p3, p4]).then(values => {
 					let user = values[0];
 					let ledger = values[1].concat(values[2]).map(e => {
 						e.ts = new Date(e.time);
@@ -689,14 +690,17 @@ class Application {
 						transaction.amount = formatter.format(transaction.amount);
 						return transaction;
 					});
+					let roles = values[4].filter(role => "unauthenticated" != role.name);
 
 					this.render("#main", "authenticated/profile", {
 						"total_balance": total_balance,
 						"equipment_type": authorized_equipment_types,
 						"ledger": ledger,
-						"user": user
+						"user": user,
+						"roles": roles,
+						"role_editable": false
 					}, {}, () => {
-						this.setupProfilePinHandlers();
+						this.read_user(this.user.id, true, false, false, false);
 						let transaction_button = null;
 						transaction_button = document.getElementById("transaction-button");
 						if(transaction_button) {
@@ -1548,6 +1552,7 @@ class Application {
 	update_user(id, event) {
 		event.preventDefault();
 		let data = this.get_form_data(event.target);
+		console.log(data)
 		
 		// Validate PIN format
 		if (data.pin && !/^\d{4}$/.test(data.pin)) {
@@ -1609,11 +1614,12 @@ class Application {
 			});
 		}).catch(e => this.handleError(e));
 	}
-
+	/**
+	 * Setup event handlers for the profile page PIN functionality
+	 */
 	setupProfilePinHandlers() {
-		// Empty because implemented in profile.mst
-	  }
-
+		// This is now handled directly in the profile.mst template
+	}
 	/**
 	 * Render an optionally sorted list of users
 	 */
