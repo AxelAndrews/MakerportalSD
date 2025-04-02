@@ -8,7 +8,7 @@
 {{^editable}}{{#authorizable}}<input type="radio" name="view-edit-toggle" id="view-edit-toggle-view-state" class="checkbox-hack" checked />{{/authorizable}}{{/editable}}
 <article>
 	<header>
-		<h1>User1: {{name}}</h1>
+		<h1>User: {{name}}</h1>
 	</header>
 	<div class="row">
 		<section>
@@ -111,7 +111,7 @@
 		{{#role_editable}}
 		<label for="role_id">Role:</label>
 		<select name="role_id" id="role_id" required />
-			{{#roles}}<option value="{{id}}">{{name}}</option>{{/roles}}
+			{{#roles}}<option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/roles}}
 		</select>
 		{{/role_editable}}
 		<label for="authorizations" style="align-self:baseline">Authorizations:</label>

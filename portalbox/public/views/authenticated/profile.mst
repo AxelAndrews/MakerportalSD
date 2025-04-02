@@ -98,9 +98,9 @@
             </div>
          </div>
       </div>
-      <!-- Hidden fields to ensure proper API submission -->
-      <input type="hidden" name="is_active" id="is_active" {{#is_active}}checked {{/is_active}}value="{{is_active}}"/>
-      <input type="hidden" name="role_id" id="role_id" value="{{role.id}}"/>
+      <!-- CRITICAL: Include these hidden fields to ensure proper API submission -->
+      <input type="hidden" name="is_active" id="is_active" value="{{is_active}}" />
+      <input type="hidden" name="role_id" id="role_id" value="{{role.id}}" />
    </form>
 </article>
 {{/editable}}

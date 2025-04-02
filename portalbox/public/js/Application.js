@@ -360,14 +360,16 @@ class Application {
 			system: null
 		};
 
-		if(this.user.has_permission(Permission.READ_OWN_USER)) {
+		 // 3. Improved route handler to ensure profile page is not overridden
+	 	// Update this in the _init_routes_for_authenticated_user method
+	  	if(this.user.has_permission(Permission.READ_OWN_USER)) {
 			this.route("/profile", _ => {
-			  console.log("Profile route handler called");
-			  
-			  // Don't use read_user - create a dedicated profile loading function
-			  this.loadProfilePage(this.user.id);
+		  		console.log("Profile route handler called");
+		  
+		  		// Don't use read_user - create a dedicated profile loading function
+		  		this.loadProfilePage(this.user.id);
 			});
-		}
+	  	}
 
 		// User needs CREATE_API_KEY Permission to make use of /api-keys/add route
 		if(this.user.has_permission(Permission.CREATE_API_KEY)) {
@@ -757,8 +759,8 @@ class Application {
 			this.set_icon_colors(document);
 		  });
 		}).catch(e => this.handleError(e));
-	}
-	updateProfile(userId, event) {
+	  }
+	  updateProfile(userId, event) {
 		console.log("Updating profile for user ID:", userId);
 		
 		// Get form data
@@ -795,7 +797,7 @@ class Application {
 			alert("Failed to update profile: " + e);
 			this.handleError(e);
 		  });
-	}
+	  }
 
 	/**
 	 * Set the current user
