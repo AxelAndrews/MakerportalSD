@@ -110,9 +110,31 @@
 		<input type="checkbox" name="is_active" id="is_active" {{#is_active}}checked {{/is_active}}/>
 		{{#role_editable}}
 		<label for="role_id">Role:</label>
-		<select name="role_id" id="role_id" required />
-			{{#roles}}<option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/roles}}
+		<select name="role_id" id="role_id" required>
+			<!-- Use explicit selection based on the user's current role -->
+			{{#roles}}
+			<option value="{{id}}" {{#role}}{{#id}}{{#^_}}{{.}}{{/^_}}{{/id}}{{/role}}{{#^_}}{{id}}{{/^_}}">{{name}}</option>
+			{{/roles}}
 		</select>
+		<script>
+			// Immediate script to ensure the user's role is selected
+			(function() {
+				var roleSelect = document.getElementById('role_id');
+				var currentRoleId = {{role.id}};
+				
+				// Set the selected option to match the user's current role
+				for(var i = 0; i < roleSelect.options.length; i++) {
+					if(parseInt(roleSelect.options[i].value) === currentRoleId) {
+						roleSelect.options[i].selected = true;
+						break;
+					}
+				}
+			})();
+		</script>
+		{{/role_editable}}
+		{{^role_editable}}
+		<!-- Include hidden role_id field to make sure it gets submitted with the form -->
+		<input type="hidden" name="role_id" value="{{role.id}}" />
 		{{/role_editable}}
 		<label for="authorizations" style="align-self:baseline">Authorizations:</label>
 		<fieldset id="authorizations">

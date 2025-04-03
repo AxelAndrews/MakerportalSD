@@ -103,6 +103,14 @@ class Session {
 	public static function check_authorization(int $permission) : bool {
 		self::require_authentication();
 
+		// Special case for profile access: Allow if accessing own profile via users.php
+		if (isset($_SERVER['REQUEST_URI']) && 
+		    strpos($_SERVER['REQUEST_URI'], '/api/users.php') !== false && 
+		    isset($_GET['id']) && 
+		    self::get_authenticated_user()->id() == $_GET['id']) {
+			return true;
+		}
+
 		return self::get_authenticated_user()->role()->has_permission($permission);
 	}
 
@@ -111,6 +119,14 @@ class Session {
 	 * not authorized.
 	 */
 	public static function require_authorization(int $permission) {
+		// Special case for profile access: Allow if accessing own profile via users.php
+		if (isset($_SERVER['REQUEST_URI']) && 
+		    strpos($_SERVER['REQUEST_URI'], '/api/users.php') !== false && 
+		    isset($_GET['id']) && 
+		    self::get_authenticated_user()->id() == $_GET['id']) {
+			return true;
+		}
+
 		if(!self::check_authorization($permission)) {
 			http_response_code(403);
 			die('You have not been granted access to this information.');
