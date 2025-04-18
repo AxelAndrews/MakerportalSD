@@ -431,6 +431,89 @@ switch($_SERVER['REQUEST_METHOD']) {
 				throw new DatabaseException($query->errorInfo()[2]);
 			}
 		}
+		elseif($_GET['mode'] == "send_email"){
+			// Required parameters validation
+			if(!(isset($_GET['user_id']) && !empty($_GET['user_id']))){
+				http_response_code(404);
+				die('missing params: needs "user_id". Failed at "user_id"');
+			}
+			if(!(isset($_GET['subject']) && !empty($_GET['subject']))){
+				http_response_code(404);
+				die('missing params: needs "subject". Failed at "subject"');
+			}
+			if(!(isset($_GET['body']) && !empty($_GET['body']))){
+				http_response_code(404);
+				die('missing params: needs "body". Failed at "body"');
+			}
+			
+			// Email type is optional, defaults to "standard"
+			$email_type = "standard";
+			if(isset($_GET['email_type']) && !empty($_GET['email_type'])){
+				$email_type = $_GET['email_type'];
+			}
+			
+			// Get user info from the database to get email address
+			$user_id = $_GET['user_id'];
+			$subject = $_GET['subject'];
+			$body = $_GET['body'];
+			
+			// Query database for user email
+			$sql = 'SELECT u.name, u.email FROM users AS u WHERE u.id = :user_id';
+			$query = $connection->prepare($sql);
+			$query->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+			
+			try {
+				if($query->execute()) {
+					$user_data = $query->fetch(PDO::FETCH_ASSOC);
+					
+					if($user_data && isset($user_data['email']) && !empty($user_data['email'])) {
+						// User found, send email
+						$to = $user_data['email'];
+						$user_name = $user_data['name'];
+						
+						// Optionally personalize email with user's name
+						$personalized_body = "Hello " . $user_name . ",\n\n" . $body;
+						
+						// Simple email headers
+						$headers = "From: PortalBox System <portalbox@" . $_SERVER['SERVER_NAME'] . ">\r\n";
+						$headers .= "Reply-To: noreply@" . $_SERVER['SERVER_NAME'] . "\r\n";
+						$headers .= "X-Mailer: PHP/" . phpversion();
+						
+						// Log email attempt
+						logging_debug("Attempting to send email to {$to} with subject: {$subject}");
+						
+						// Send the email
+						$mail_result = mail($to, $subject, $personalized_body, $headers);
+						
+						if($mail_result) {
+							// Email sent successfully
+							logging_debug("Email sent successfully to {$to}");
+							echo "Email sent successfully";
+						} else {
+							// Email failed to send
+							logging_error("Failed to send email to {$to}");
+							http_response_code(500);
+							echo "Failed to send email";
+						}
+					} else {
+						// User email not found
+						logging_error("User email not found for user ID: {$user_id}");
+						http_response_code(404);
+						echo "User email not found";
+					}
+				} else {
+					// Database query failed
+					logging_error("Database query failed: " . $query->errorInfo()[2]);
+					http_response_code(500);
+					echo "Database query failed";
+				}
+			} catch (Exception $e) {
+				// Exception handling
+				logging_error("Exception occurred while sending email: " . $e->getMessage());
+				http_response_code(500);
+				echo "An error occurred while processing the email request";
+			}
+		}
 		elseif(!(isset($_GET['mode']) && !empty($_GET['mode']))){
 			http_response_code(404);
 			die('Missing "mode", options are "log_access_attempt", "log_access_completion", "log_shutdown_status", "log_started_status", and "record_ip"');
