@@ -2,8 +2,8 @@
 ## Credit to Tom Egan for the bulk of this repository. Updates from his version are the addition of PINs, and resources for cloud deployment through AWS CloudFormation.
 
 ## CloudFormation Instructions
-1. Download makerportal-template.yaml
-2. Login to the AWS Console
+1. Download `makerportal-template.yaml`.
+2. Login to the AWS Console.
 3. If you do not have a private keypair, create one in EC2.
 4. Go to AWS CloudFormation, click "Create Stack", upload from template with the downloaded file.
 5. Fill out your Name, Email, Password (for the database), Google OAuth Client-ID, and select your keypair.
