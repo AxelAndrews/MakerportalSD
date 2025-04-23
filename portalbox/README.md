@@ -10,6 +10,14 @@ Credit to Tom Egan (tom@tomegan.tech) for the bulk of this repository. Updates f
 6. Click through to build the stack.
 7. Voila! Within 15-20 minutes your MakerPortal stack will be ready. You can register a domain of your choice on AWS Route 53 or another registrar.
 
+## Further Configuration After CloudFormation
+Use Remote SSH to login to your EC2 instance with your keypair from the AWS Console. 
+- You can then navigate through the server. You may need to run `sudo chown -R ec2-user:ec2-user .` to make files temporarily saveable, then `sudo chown -R apache:apache .` to return ownership to the server.
+- Run `sudo systemctl restart httpd` and `sudo systemctl restart php-fpm` to restart the server properly after making changes.
+- To update styling of the MakerPortal, visit `/var/www/html/portalbox/public/styles/styles.css`.
+- To update `index.html`, which styles the main menu, visit `/var/www/html/portalbox/public/index.html`.
+- If you need to change any configuration values, edit `/var/www/html/portalbox/config/config.ini`.
+
 # Original README for Self-Deployment
 ## About
 This web application is the companion webite for a deployment of MakerSpace Portal Boxes. Consisting of two parts; a single page web application (SPA) with OAuth2 authentication using hellojs and a backend REST API built with PHP+PDO(mysql). By default, the website allows unauthenticated users to check the availability of equipment, authenticated users to check their account balances, and admins to administer the system. We have implemented a flexible role based access system allowing you to create new roles such as trainers or auditors.
