@@ -1,5 +1,5 @@
 # Maker Portal
-## Credit to Tom Egan for the bulk of this repository. Updates from his version are the addition of PINs, and resources for cloud deployment through AWS CloudFormation.
+Credit to Tom Egan (tom@tomegan.tech) for the bulk of this repository. Updates from his version are the addition of PINs, and resources for cloud deployment through AWS CloudFormation. If you are looking for the original MakerPortal, visit https://github.com/Bucknell-ECE/PortalBox-ManagementPortal.
 
 ## CloudFormation Instructions
 1. Download `makerportal-template.yaml`.
@@ -109,7 +109,7 @@ You should take care to prevent the contents of the `config` directory from bein
 
 ## Author
 
-Since 2019 Tom Egan <tom@tomegan.tech>
+Since 2019 Tom Egan <>
 
 ## Roadmap
 - work with OAUTH providers other than Google
