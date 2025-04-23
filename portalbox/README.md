@@ -1,5 +1,16 @@
 # Maker Portal
+## Credit to Tom Egan for the bulk of this repository. Updates from his version are the addition of PINs, and resources for cloud deployment through AWS CloudFormation.
 
+## CloudFormation Instructions
+1. Download makerportal-template.yaml
+2. Login to the AWS Console
+3. If you do not have a private keypair, create one in EC2.
+4. Go to AWS CloudFormation, click "Create Stack", upload from template with the downloaded file.
+5. Fill out your Name, Email, Password (for the database), Google OAuth Client-ID, and select your keypair.
+6. Click through to build the stack.
+7. Voila! Within 15-20 minutes your MakerPortal stack will be ready. You can register a domain of your choice on AWS Route 53 or another registrar.
+
+# Original README for Self-Deployment
 ## About
 This web application is the companion webite for a deployment of MakerSpace Portal Boxes. Consisting of two parts; a single page web application (SPA) with OAuth2 authentication using hellojs and a backend REST API built with PHP+PDO(mysql). By default, the website allows unauthenticated users to check the availability of equipment, authenticated users to check their account balances, and admins to administer the system. We have implemented a flexible role based access system allowing you to create new roles such as trainers or auditors.
 
